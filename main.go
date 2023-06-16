@@ -10,6 +10,7 @@ import (
 	dbmodels "github.com/razak17/go-sqlboiler-example/db/models"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 func main() {
@@ -21,7 +22,7 @@ func main() {
 	author := createAuthor(ctx)
 	createArticle(ctx, author)
 	createArticle(ctx, author)
-	selectAuthorWithArticles(ctx, author.ID)
+	selectAuthorWithArticlesEager(ctx, author.ID)
 }
 
 func connectDB() *sql.DB {
@@ -76,6 +77,22 @@ func selectAuthorWithArticles(ctx context.Context, authorID int) {
 	}
 
 	for _, a := range articles {
+		fmt.Printf("Article: \n\tID:%d \n\tTitle:%s \n\tBody:%s \n\tCreatedAt:%v\n", a.ID, a.Title, a.Body.String, a.CreatedAt.Time)
+	}
+}
+
+func selectAuthorWithArticlesEager(ctx context.Context, authorID int) {
+	author, err := dbmodels.Authors(
+		dbmodels.AuthorWhere.ID.EQ(authorID),
+		qm.Load(dbmodels.AuthorRels.Articles),
+	).OneG(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Author: \n\tID:%d \n\tName:%s \n\tEmail:%s\n", author.ID, author.Name, author.Email)
+
+	for _, a := range author.R.Articles {
 		fmt.Printf("Article: \n\tID:%d \n\tTitle:%s \n\tBody:%s \n\tCreatedAt:%v\n", a.ID, a.Title, a.Body.String, a.CreatedAt.Time)
 	}
 }
