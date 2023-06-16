@@ -22,7 +22,7 @@ func main() {
 	author := createAuthor(ctx)
 	createArticle(ctx, author)
 	createArticle(ctx, author)
-	selectAuthorWithArticlesEager(ctx, author.ID)
+	selectAuthorWithArticlesJoin(ctx, 2)
 }
 
 func connectDB() *sql.DB {
@@ -93,6 +93,33 @@ func selectAuthorWithArticlesEager(ctx context.Context, authorID int) {
 	fmt.Printf("Author: \n\tID:%d \n\tName:%s \n\tEmail:%s\n", author.ID, author.Name, author.Email)
 
 	for _, a := range author.R.Articles {
+		fmt.Printf("Article: \n\tID:%d \n\tTitle:%s \n\tBody:%s \n\tCreatedAt:%v\n", a.ID, a.Title, a.Body.String, a.CreatedAt.Time)
+	}
+}
+
+func selectAuthorWithArticlesJoin(ctx context.Context, authorID int) {
+	type AuthorAndArticle struct {
+		Article dbmodels.Article `boil:"articles,bind"`
+		Author  dbmodels.Author  `boil:"author,bind"`
+	}
+
+	authorAndArticles := make([]AuthorAndArticle, 0)
+
+	err := dbmodels.NewQuery(
+		qm.Select("*"),
+		qm.From(dbmodels.TableNames.Author),
+		qm.InnerJoin("article on article.author_id = author.id"),
+		dbmodels.AuthorWhere.ID.EQ(authorID),
+	).BindG(ctx, &authorAndArticles)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, authorAndArticle := range authorAndArticles {
+		author := authorAndArticle.Author
+		a := authorAndArticle.Article
+
+		fmt.Printf("Author: \n\tID:%d \n\tName:%s \n\tEmail:%s\n", author.ID, author.Name, author.Email)
 		fmt.Printf("Article: \n\tID:%d \n\tTitle:%s \n\tBody:%s \n\tCreatedAt:%v\n", a.ID, a.Title, a.Body.String, a.CreatedAt.Time)
 	}
 }
