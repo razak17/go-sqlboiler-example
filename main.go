@@ -3,12 +3,11 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
-	"os"
 
 	_ "github.com/lib/pq"
 	dbmodels "github.com/razak17/go-sqlboiler-example/db/models"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
@@ -19,7 +18,8 @@ func main() {
 	boil.SetDB(db)
 
 	author := createAuthor(ctx)
-	fmt.Fprintf(os.Stderr, "DEBUGPRINT[1]: main.go:19: author=%+v\n", author)
+	createArticle(ctx, author)
+	createArticle(ctx, author)
 }
 
 func connectDB() *sql.DB {
@@ -43,4 +43,19 @@ func createAuthor(ctx context.Context) dbmodels.Author {
 	}
 
 	return author
+}
+
+func createArticle(ctx context.Context, author dbmodels.Author) dbmodels.Article {
+	article := dbmodels.Article{
+		Title:    "Hello World",
+		Body:     null.StringFrom("This is an article."),
+		AuthorID: author.ID,
+	}
+
+	err := article.InsertG(ctx, boil.Infer())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return article
 }
