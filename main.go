@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 
 	_ "github.com/lib/pq"
@@ -20,6 +21,7 @@ func main() {
 	author := createAuthor(ctx)
 	createArticle(ctx, author)
 	createArticle(ctx, author)
+	selectAuthorWithArticles(ctx, author.ID)
 }
 
 func connectDB() *sql.DB {
@@ -58,4 +60,22 @@ func createArticle(ctx context.Context, author dbmodels.Author) dbmodels.Article
 	}
 
 	return article
+}
+
+func selectAuthorWithArticles(ctx context.Context, authorID int) {
+	author, err := dbmodels.Authors(dbmodels.AuthorWhere.ID.EQ(authorID)).OneG(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Author: \n\tID:%d \n\tName:%s \n\tEmail:%s\n", author.ID, author.Name, author.Email)
+
+	articles, err := author.Articles().AllG(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, a := range articles {
+		fmt.Printf("Article: \n\tID:%d \n\tTitle:%s \n\tBody:%s \n\tCreatedAt:%v\n", a.ID, a.Title, a.Body.String, a.CreatedAt.Time)
+	}
 }
